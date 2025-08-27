@@ -130,5 +130,11 @@ class TailscaleBinarySensorEntity(TailscaleEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        """Return the state of the sensor."""
-        return self.entity_description.is_on_fn(self.coordinator.data[self.device_id])
+        """Return the state of the sensor. Self-remove if orphaned."""
+        device = self.coordinator.data.get(self.device_id)
+        if device is None:
+            # Device was deleted—remove entity from HA registry and self.
+            self.hass.async_create_task(self.async_remove(force_remove=True))
+            return None
+        return self.entity_description.is_on_fn(device)
+
